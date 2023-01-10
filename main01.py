@@ -11,20 +11,21 @@ import matplotlib as mpl
 
 from model import myLSTM
 
-df = pd.read_csv('WMT_Earnings.csv', index_col='Date')
+#df = pd.read_csv('WMT_Earnings.csv', index_col='Date')
+df = pd.read_csv('demand.csv', index_col='date')
 #-- Using this we can select the amount of data to use, some of the very early years 
 #- aren't formatted properly and will throw an error
-df=df.iloc[:50]
+#df=df.iloc[:50]
 #-- Change the dates into a format that pandas will recognise
-df.index = [df.index[i].split()[0]+" "+df.index[i].split()[2] for i in range(len(df.index))]
+#df.index = [df.index[i].split()[0]+" "+df.index[i].split()[2] for i in range(len(df.index))]
 #-- Set index to correct format
-df.index = pd.to_datetime(df.index)
+#df.index = pd.to_datetime(df.index)
 #-- Put the data in chronological order
-df = df.iloc[::-1]
+#df = df.iloc[::-1]
 #-- Only select data up to end of 2019
-df = df[:"2019"]
+#df = df[:"2019"]
 #-- Remove the B (standing for billion) from the values and store as float rather than a string
-df.Value = [float(df.Value[i][:-1]) for i in range(len(df.Value))]
+#df.Value = [float(df.Value[i][:-1]) for i in range(len(df.Value))]
 
 def train_test(df, test_periods):
     train = df[:-test_periods].values
