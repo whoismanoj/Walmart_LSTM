@@ -3,6 +3,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+import matplotlib.pyplot as plt
+from array import array
 
 
 # preparing independent and dependent features
@@ -44,3 +46,42 @@ model.add(layers.Dense(1))
 model.compile(optimizer='adam', loss='mse')
 # fit model
 model.fit(X, y, epochs=300, verbose=1)
+
+
+# demonstrate prediction for next 10 days
+x_input = np.array([187, 196, 210])
+temp_input=list(x_input)
+lst_output=[]
+i=0
+while(i<10):
+    
+    if(len(temp_input)>3):
+        x_input= np.array(temp_input[1:])
+        print("{} day input {}".format(i,x_input))
+        #print(x_input)
+        x_input = x_input.reshape((1, n_steps, n_features))
+        #print(x_input)
+        yhat = model.predict(x_input, verbose=0)
+        print("{} day output {}".format(i,yhat))
+        temp_input.append(yhat[0][0])
+        temp_input=temp_input[1:]
+        #print(temp_input)
+        lst_output.append(yhat[0][0])
+        i=i+1
+    else:
+        x_input = x_input.reshape((1, n_steps, n_features))
+        yhat = model.predict(x_input, verbose=0)
+        print(yhat[0])
+        temp_input.append(yhat[0][0])
+        lst_output.append(yhat[0][0])
+        i=i+1
+    
+
+print(lst_output)
+
+day_new=np.arange(1,10)
+day_pred=np.arange(10,20)
+
+plt.plot(day_new,timeseries_data)
+plt.plot(day_pred,lst_output)
+plt.show()
