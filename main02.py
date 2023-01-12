@@ -1,87 +1,92 @@
-# univariate lstm example
 import numpy as np
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
+import torch
+import torch.nn as nn
+from datasource import get_data_random
+from datasource import get_data_random_poisson
+
+# Generate random dataset
+np.random.seed(0)
+timesteps = 1000
+lamda = 50
+data = get_data_random_poisson(lamda=lamda, timesteps=timesteps)
+print(data)
+
+
+# Split data into train and test sets
+train_data = data[:int(timesteps*0.8)]
+test_data = data[int(timesteps*0.8):]
+
+# Convert data to PyTorch tensors
+train_data = torch.tensor(train_data, dtype=torch.float32)
+test_data = torch.tensor(test_data, dtype=torch.float32)
+
+# Define LSTM model
+class LSTMModel(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super(LSTMModel, self).__init__()
+        self.lstm = nn.LSTM(input_size, hidden_size)
+        self.linear = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x):
+        x, _ = self.lstm(x)
+        x = self.linear(x)
+        return x
+
+model = LSTMModel(input_size=1, hidden_size=64, output_size=1)
+
+# Define loss function and optimizer
+criterion = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters())
+
+# Train model
+# Keep track of losses during training
+test_accuracies = []
+losses = []
+num_epochs = 3000
+for epoch in range(num_epochs):
+    optimizer.zero_grad()
+    output = model(train_data)
+    loss = criterion(output, train_data)
+    loss.backward()
+    optimizer.step()
+    losses.append(loss.item())
+
+
+# Plot the loss function
 import matplotlib.pyplot as plt
-from array import array
-
-
-# preparing independent and dependent features
-def prepare_data(timeseries_data, n_features):
-	X, y =[],[]
-	for i in range(len(timeseries_data)):
-		# find the end of this pattern
-		end_ix = i + n_features
-		# check if we are beyond the sequence
-		if end_ix > len(timeseries_data)-1:
-			break
-		# gather input and output parts of the pattern
-		seq_x, seq_y = timeseries_data[i:end_ix], timeseries_data[end_ix]
-		X.append(seq_x)
-		y.append(seq_y)
-	return np.array(X), np.array(y)
-
-# define input sequence
-timeseries_data = [110, 125, 133, 146, 158, 172, 187, 196, 210]
-# choose a number of time steps
-n_steps = 3
-# split into samples
-X, y = prepare_data(timeseries_data, n_steps)
-
-print(X)
-print(y)
-
-print(X.shape)
-
-# reshape from [samples, timesteps] into [samples, timesteps, features]
-n_features = 1
-X = X.reshape((X.shape[0], X.shape[1], n_features))
-
-# define model
-model = keras.Sequential()
-model.add(layers.LSTM(50, activation='relu', return_sequences=True, input_shape=(n_steps, n_features)))
-model.add(layers.LSTM(50, activation='relu'))
-model.add(layers.Dense(1))
-model.compile(optimizer='adam', loss='mse')
-# fit model
-model.fit(X, y, epochs=300, verbose=1)
-
-
-# demonstrate prediction for next 10 days
-x_input = np.array([187, 196, 210])
-temp_input=list(x_input)
-lst_output=[]
-i=0
-while(i<10):
-    
-    if(len(temp_input)>3):
-        x_input= np.array(temp_input[1:])
-        print("{} day input {}".format(i,x_input))
-        #print(x_input)
-        x_input = x_input.reshape((1, n_steps, n_features))
-        #print(x_input)
-        yhat = model.predict(x_input, verbose=0)
-        print("{} day output {}".format(i,yhat))
-        temp_input.append(yhat[0][0])
-        temp_input=temp_input[1:]
-        #print(temp_input)
-        lst_output.append(yhat[0][0])
-        i=i+1
-    else:
-        x_input = x_input.reshape((1, n_steps, n_features))
-        yhat = model.predict(x_input, verbose=0)
-        print(yhat[0])
-        temp_input.append(yhat[0][0])
-        lst_output.append(yhat[0][0])
-        i=i+1
-    
-
-print(lst_output)
-
-day_new=np.arange(1,10)
-day_pred=np.arange(10,20)
-
-plt.plot(day_new,timeseries_data)
-plt.plot(day_pred,lst_output)
+plt.plot(losses)
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
 plt.show()
+
+# Use model to make predictions on test data
+predictions = model(test_data)
+
+# Calculate MSE error
+mse_error = nn.MSELoss()(predictions, test_data)
+print('MSE error:', mse_error.item())
+
+# Use model to make predictions
+#test_predictions = model(test_data)
+test_predictions = predictions.view(-1).detach().numpy()
+
+# Calculate accuracy on test data
+test_ground_truth = test_data.view(-1).numpy()
+
+# Calculate the number of correct predictions
+correct_predictions = np.sum(np.round(test_predictions) == test_ground_truth)
+
+# Calculate the total number of predictions
+total_predictions = len(test_predictions)
+
+# Calculate the percentage of accuracy
+accuracy = correct_predictions / total_predictions * 100
+print('Test accuracy: {:.2f}%'.format(accuracy))
+
+
+# Plot predictions against ground truth
+plt.plot(test_data.view(-1).numpy(), label='Ground Truth')
+plt.plot(test_predictions, label='Prediction')
+plt.legend()
+plt.show()
+

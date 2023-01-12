@@ -1,14 +1,17 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from datasource import get_data_random
-from datasource import get_data_random_poisson
+#from datasource import get_data_random # dataset 1
+#from datasource import get_data_random_poisson # dataset 2
+from datasource import get_data_random_demand  # dataset 4
 
 # Generate random dataset
 np.random.seed(0)
-timesteps = 1000
-lamda = 50
-data = get_data_random_poisson(lamda=lamda, timesteps=timesteps)
+timesteps = 20
+k = 52 # total_weeks
+
+# dataset size = k * timesteps
+data = get_data_random_demand(k, timesteps)
 print(data)
 
 
@@ -42,7 +45,7 @@ optimizer = torch.optim.Adam(model.parameters())
 # Keep track of losses during training
 test_accuracies = []
 losses = []
-num_epochs = 3000
+num_epochs = 10000
 for epoch in range(num_epochs):
     optimizer.zero_grad()
     output = model(train_data)

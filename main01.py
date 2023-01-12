@@ -1,114 +1,91 @@
-#-- Necessary Imports
-import pandas as pd
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.optim as optim
-import datetime as dt
+from datasource import get_data_random
+from datasource import get_data_sine_wave
 
-import matplotlib.pyplot as plt
-import matplotlib as mpl
+# Generate random dataset
+np.random.seed(0)
+timesteps = 1000
+data = get_data_random(timesteps)
+print(data)
 
-from model import myLSTM
 
-#df = pd.read_csv('WMT_Earnings.csv', index_col='Date')
-df = pd.read_csv('demand.csv', index_col='date')
-#-- Using this we can select the amount of data to use, some of the very early years 
-#- aren't formatted properly and will throw an error
-#df=df.iloc[:50]
-#-- Change the dates into a format that pandas will recognise
-#df.index = [df.index[i].split()[0]+" "+df.index[i].split()[2] for i in range(len(df.index))]
-#-- Set index to correct format
-#df.index = pd.to_datetime(df.index)
-#-- Put the data in chronological order
-#df = df.iloc[::-1]
-#-- Only select data up to end of 2019
-#df = df[:"2019"]
-#-- Remove the B (standing for billion) from the values and store as float rather than a string
-#df.Value = [float(df.Value[i][:-1]) for i in range(len(df.Value))]
+# Split data into train and test sets
+train_data = data[:int(timesteps*0.8)]
+test_data = data[int(timesteps*0.8):]
 
-def train_test(df, test_periods):
-    train = df[:-test_periods].values
-    test = df[-test_periods:].values
-    return train, test
-test_periods = 8
-train, test = train_test(df, test_periods)
+# Convert data to PyTorch tensors
+train_data = torch.tensor(train_data, dtype=torch.float32)
+test_data = torch.tensor(test_data, dtype=torch.float32)
 
-from sklearn.preprocessing import MinMaxScaler
-scaler = MinMaxScaler()
-scaler.fit(train)
-train_scaled = scaler.transform(train)
+# Define LSTM model
+class LSTMModel(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super(LSTMModel, self).__init__()
+        self.lstm = nn.LSTM(input_size, hidden_size)
+        self.linear = nn.Linear(hidden_size, output_size)
 
-train_scaled = torch.FloatTensor(train_scaled)
-print(f'Original dimensions : {train_scaled.shape}')
-train_scaled = train_scaled.view(-1)
-print(f'Correct dimensions : {train_scaled.shape}')
+    def forward(self, x):
+        x, _ = self.lstm(x)
+        x = self.linear(x)
+        return x
 
-def get_x_y_pairs(train_scaled, train_periods, prediction_periods):
-    """
-    train_scaled - training sequence
-    train_periods - How many data points to use as inputs
-    prediction_periods - How many periods to ouput as predictions
-    """
-    x_train = [train_scaled[i:i+train_periods] for i in range(len(train_scaled)-train_periods-prediction_periods)]
-    y_train = [train_scaled[i+train_periods:i+train_periods+prediction_periods] for i in range(len(train_scaled)-train_periods-prediction_periods)]
-    
-    #-- use the stack function to convert the list of 1D tensors
-    # into a 2D tensor where each element of the list is now a row
-    x_train = torch.stack(x_train)
-    y_train = torch.stack(y_train)
-    
-    return x_train, y_train
+model = LSTMModel(input_size=1, hidden_size=64, output_size=1)
 
-train_periods = 16 #-- number of quarters for input
-prediction_periods = test_periods
-x_train, y_train = get_x_y_pairs(train_scaled, train_periods, prediction_periods)
-print(x_train.shape)
-print(y_train.shape)
-
-model = myLSTM(input_size=1, hidden_size=50, output_size=test_periods)
+# Define loss function and optimizer
 criterion = nn.MSELoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+optimizer = torch.optim.Adam(model.parameters())
 
-epochs = 1000
-model.train()
-for epoch in range(epochs+1):
-    for x,y in zip(x_train, y_train):
-        y_hat, _ = model(x, None)
-        optimizer.zero_grad()
-        loss = criterion(y_hat, y)
-        loss.backward()
-        optimizer.step()
-        
-    if epoch%100==0:
-        print(f'epoch: {epoch:4} loss:{loss.item():10.8f}')
+# Train model
+# Keep track of losses during training
+test_accuracies = []
+losses = []
+num_epochs = 6000
+for epoch in range(num_epochs):
+    optimizer.zero_grad()
+    output = model(train_data)
+    loss = criterion(output, train_data)
+    loss.backward()
+    optimizer.step()
+    losses.append(loss.item())
 
 
-model.eval()
-with torch.no_grad():
-    predictions, _ = model(train_scaled[-train_periods:], None)
-#-- Apply inverse transform to undo scaling
-predictions = scaler.inverse_transform(np.array(predictions.reshape(-1,1)))
-
-x = [dt.datetime.date(d) for d in df.index]
-font = {'size'   : 15}
-
-mpl.rc('font', **font)
-fig = plt.figure(figsize=(10,5))
-plt.title('Walmart Quarterly Revenue')
-plt.ylabel('Revenue (Billions)')
-plt.grid(True)
-plt.plot(x[:-len(predictions)],
-         df.Value[:-len(predictions)],
-         "b-")
-plt.plot(x[-len(predictions):],
-         df.Value[-len(predictions):],
-         "b--",
-         label='True Values')
-plt.plot(x[-len(predictions):],
-         predictions,
-         "r-",
-         label='Predicted Values')
-plt.legend()
-# plt.savefig('plot1', dpi=600)
+# Plot the loss function
+import matplotlib.pyplot as plt
+plt.plot(losses)
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
 plt.show()
+
+# Use model to make predictions on test data
+predictions = model(test_data)
+
+# Calculate MSE error
+mse_error = nn.MSELoss()(predictions, test_data)
+print('MSE error:', mse_error.item())
+
+# Use model to make predictions
+#test_predictions = model(test_data)
+test_predictions = predictions.view(-1).detach().numpy()
+
+# Calculate accuracy on test data
+test_ground_truth = test_data.view(-1).numpy()
+
+# Calculate the number of correct predictions
+correct_predictions = np.sum(np.round(test_predictions) == test_ground_truth)
+
+# Calculate the total number of predictions
+total_predictions = len(test_predictions)
+
+# Calculate the percentage of accuracy
+accuracy = correct_predictions / total_predictions * 100
+print('Test accuracy: {:.2f}%'.format(accuracy))
+
+
+# Plot predictions against ground truth
+plt.plot(test_data.view(-1).numpy(), label='Ground Truth')
+plt.plot(test_predictions, label='Prediction')
+plt.legend()
+plt.show()
+
