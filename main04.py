@@ -2,12 +2,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 from datasource import get_data_random
-from datasource import get_data_sine_wave
+from datasource import get_data_random_poisson
 
 # Generate random dataset
 np.random.seed(0)
 timesteps = 1000
-data = get_data_random(timesteps)
+data = get_data_random_poisson(timesteps)
 print(data)
 
 
@@ -41,7 +41,7 @@ optimizer = torch.optim.Adam(model.parameters())
 # Keep track of losses during training
 test_accuracies = []
 losses = []
-num_epochs = 6000
+num_epochs = 10000
 for epoch in range(num_epochs):
     optimizer.zero_grad()
     output = model(train_data)
