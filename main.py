@@ -48,7 +48,6 @@ for epoch in range(num_epochs):
     losses.append(loss.item())
 
 
-
 # Plot the loss function
 import matplotlib.pyplot as plt
 plt.plot(losses)
@@ -56,9 +55,16 @@ plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.show()
 
+# Use model to make predictions on test data
+predictions = model(test_data)
+
+# Calculate MSE error
+mse_error = nn.MSELoss()(predictions, test_data)
+print('MSE error:', mse_error.item())
+
 # Use model to make predictions
-test_predictions = model(test_data)
-test_predictions = test_predictions.view(-1).detach().numpy()
+#test_predictions = model(test_data)
+test_predictions = predictions.view(-1).detach().numpy()
 
 # Calculate accuracy on test data
 test_ground_truth = test_data.view(-1).numpy()
