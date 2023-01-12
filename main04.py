@@ -7,7 +7,8 @@ from datasource import get_data_random_poisson
 # Generate random dataset
 np.random.seed(0)
 timesteps = 1000
-data = get_data_random_poisson(timesteps)
+lamda = 50
+data = get_data_random_poisson(lamda=lamda, timesteps=timesteps)
 print(data)
 
 
@@ -41,7 +42,7 @@ optimizer = torch.optim.Adam(model.parameters())
 # Keep track of losses during training
 test_accuracies = []
 losses = []
-num_epochs = 10000
+num_epochs = 3000
 for epoch in range(num_epochs):
     optimizer.zero_grad()
     output = model(train_data)

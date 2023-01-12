@@ -11,3 +11,8 @@ def get_data_random_demand():
 def get_data_sine_wave(timesteps=1):
     d = np.sin(np.linspace(0, 10*np.pi, timesteps))    
     return d
+
+def get_data_random_poisson(lamda=5,timesteps=1):
+    d = np.random.poisson(lam=lamda, size=timesteps)
+    d = d.reshape(timesteps, 1)        
+    return d.copy()
