@@ -1,5 +1,5 @@
 import numpy as np
-import torch
+import pandas as pd
 import random
 
 # Dataset 1
@@ -29,4 +29,11 @@ def get_data_random_demand(k=1, timesteps=1):
 def get_data_sine_wave(timesteps=1):
     d = np.sin(np.linspace(0, 10*np.pi, timesteps))    
     return d
+
+def get_dataset_5():
+    df = pd.read_csv("dataset5.csv")
+    df1 = df["Quantity"].tolist()
+    df2 = np.array(df1)
+    df3 = df2.reshape(len(df1), 1)
+    return df3
 
