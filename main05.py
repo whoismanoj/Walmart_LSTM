@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+<<<<<<< HEAD
 from datasource import get_data_random
 from datasource import get_data_sine_wave
 from datasource import get_dataset_5
@@ -20,6 +21,23 @@ test_data = data[int(timesteps*0.8):]
 train_data = torch.tensor(train_data, dtype=torch.float32)
 test_data = torch.tensor(test_data, dtype=torch.float32)
 
+=======
+import random
+
+import matplotlib
+import matplotlib.pyplot as plt
+
+random.seed(0)
+# Generate data with 52 features
+timesteps = 1000
+data = np.random.randint(low=0, high=100, size=(timesteps, 52))
+#print(data)
+#print(data.shape)
+# Convert data to PyTorch tensors
+data = torch.tensor(data, dtype=torch.float32)
+#print(data)
+#print(data.shape)
+>>>>>>> a7bd14cf9eb963a580d6d96910a73d608607173b
 # Define LSTM model
 class LSTMModel(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
@@ -32,13 +50,18 @@ class LSTMModel(nn.Module):
         x = self.linear(x)
         return x
 
+<<<<<<< HEAD
 model = LSTMModel(input_size=1, hidden_size=64, output_size=1)
+=======
+model = LSTMModel(52, 64, 52)
+>>>>>>> a7bd14cf9eb963a580d6d96910a73d608607173b
 
 # Define loss function and optimizer
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters())
 
 # Train model
+<<<<<<< HEAD
 # Keep track of losses during training
 test_accuracies = []
 losses = []
@@ -47,11 +70,26 @@ for epoch in range(num_epochs):
     optimizer.zero_grad()
     output = model(train_data)
     loss = criterion(output, train_data)
+=======
+losses = []
+num_epochs = 3000
+for epoch in range(num_epochs):
+    optimizer.zero_grad()
+    output = model(data)
+    loss = criterion(output, data)
+>>>>>>> a7bd14cf9eb963a580d6d96910a73d608607173b
     loss.backward()
     optimizer.step()
     losses.append(loss.item())
 
 
+<<<<<<< HEAD
+=======
+# Generate test data
+test_data = np.random.randint(low=0, high=100, size=(20, 52))
+test_data = torch.tensor(test_data, dtype=torch.float32)
+
+>>>>>>> a7bd14cf9eb963a580d6d96910a73d608607173b
 # Plot the loss function
 import matplotlib.pyplot as plt
 plt.plot(losses)
